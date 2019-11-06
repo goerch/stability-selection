@@ -51,6 +51,19 @@ def _return_estimator_from_pipeline(pipeline):
         return pipeline
 
 
+def _return_support_from_pipeline(pipeline, variable_selector):
+    """Returns the support of a Pipeline after variable selection"""
+    support = variable_selector.get_support()
+    if isinstance(pipeline, Pipeline):
+        reverse_iter = reversed(list(pipeline._iter()))
+        for idx, name, transform in reverse_iter:
+            if hasattr(transform, 'get_support'):
+                temp = transform.get_support()
+                temp[transform.get_support(indices=True)] = support
+                support = temp
+    return support
+
+
 def _bootstrap_generator(n_bootstrap_iterations, bootstrap_func, y,
                          n_subsamples, random_state=None):
     for _ in range(n_bootstrap_iterations):
@@ -109,7 +122,7 @@ def _fit_bootstrap_sample(base_estimator, X, y, lambda_name, lambda_value,
     variable_selector = SelectFromModel(estimator=selector_model,
                                         threshold=threshold,
                                         prefit=True)
-    return variable_selector.get_support()
+    return _return_support_from_pipeline(base_estimator, variable_selector)
 
 
 def plot_stability_path(stability_selection, threshold_highlight=None,
